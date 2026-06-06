@@ -35,6 +35,8 @@ yarn-error.log*
 
 # database (auto-created on first run)
 src/db/data.db
+src/db/data.db-shm
+src/db/data.db-wal
 
 # vercel
 .vercel
