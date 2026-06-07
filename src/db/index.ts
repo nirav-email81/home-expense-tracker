@@ -110,6 +110,21 @@ function initDb() {
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
 
+    CREATE TABLE IF NOT EXISTS investments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL CHECK(type IN ('deposit', 'mutual_fund', 'gold', 'art', 'other')),
+      amount REAL NOT NULL,
+      quantity REAL,
+      purchase_date TEXT NOT NULL,
+      notes TEXT DEFAULT '',
+      user_id INTEGER NOT NULL,
+      family_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (family_id) REFERENCES families(id)
+    );
+
     CREATE TABLE IF NOT EXISTS planned_expenses (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,

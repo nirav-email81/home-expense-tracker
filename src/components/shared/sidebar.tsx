@@ -13,6 +13,7 @@ import {
   LogOut,
   Users,
   CalendarRange,
+  Landmark,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -26,6 +27,7 @@ const navItems = [
   { href: "/recurring", label: "Recurring", icon: Repeat },
   { href: "/reports", label: "Reports", icon: FileText },
   { href: "/planned-expenses", label: "Planned", icon: CalendarRange },
+  { href: "/investments", label: "Investments", icon: Landmark },
 ];
 
 export function Sidebar() {

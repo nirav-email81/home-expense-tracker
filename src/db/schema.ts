@@ -80,6 +80,19 @@ export const sessions = sqliteTable("sessions", {
   createdAt: text("created_at").notNull().default("(datetime('now'))"),
 });
 
+export const investments = sqliteTable("investments", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  type: text("type", { enum: ["deposit", "mutual_fund", "gold", "art", "other"] }).notNull(),
+  amount: real("amount").notNull(),
+  quantity: real("quantity"),
+  purchaseDate: text("purchase_date").notNull(),
+  notes: text("notes").default(""),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  familyId: integer("family_id").references(() => families.id),
+  createdAt: text("created_at").notNull().default("(datetime('now'))"),
+});
+
 export const plannedExpenses = sqliteTable("planned_expenses", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
