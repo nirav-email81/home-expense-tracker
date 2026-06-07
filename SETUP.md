@@ -241,7 +241,9 @@ HOME-EXPENSE-TRACKER/
 4. Start by adding **Categories** (or use the pre-seeded defaults)
 5. Add **Expenses** and **Income**
 6. Set **Budgets** for monthly limits
-7. Explore **Reports** for charts and CSV/PDF export
+7. Use **Recurring** for regular expenses and **Planned** for major expected expenses
+8. Track **Investments** (deposits, mutual funds, gold, art)
+9. Explore **Reports** for charts and CSV/PDF export
 8. Optionally, create a **Family** to share with household members
 
 ---

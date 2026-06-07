@@ -223,7 +223,41 @@
 
 ---
 
-## 8. Family
+## 8. Investments
+
+### TC-INV-01: Add Investment (No Family)
+1. Go to Investments page (user not in a family)
+2. Click "Add Investment"
+3. Enter name, type (Deposit/Mutual Fund/Gold/Art/Other), amount, purchase date
+4. Click "Add Investment"
+5. **Expected**: Toast "Investment added", entry appears in table
+
+### TC-INV-02: Summary Cards
+1. Add investments across multiple types
+2. **Expected**: Summary cards show correct totals per type and grand total
+
+### TC-INV-03: Quantity Field
+1. Add investment with quantity (e.g. 10g gold)
+2. **Expected**: Quantity displayed in Qty column
+
+### TC-INV-04: Owner-Only Access (Family)
+1. Create a family as User A
+2. Log in as non-owner member (User B)
+3. Go to Investments page
+4. **Expected**: Shows "Access Restricted" message, cannot add/edit/delete
+
+### TC-INV-05: Owner Full Access (Family)
+1. Log in as family owner
+2. Go to Investments page
+3. **Expected**: Full CRUD access, add/edit/delete works
+
+### TC-INV-06: Edit/Delete
+1. Edit investment → changes saved
+2. Delete → entry removed
+
+---
+
+## 9. Family
 
 ### TC-FAM-01: Create Family
 1. Go to Family page (no family)
@@ -259,7 +293,7 @@
 
 ---
 
-## 9. Dashboard
+## 10. Dashboard
 
 ### TC-DSB-01: Summary Cards
 1. Go to Dashboard
@@ -280,7 +314,7 @@
 
 ---
 
-## 10. Reports
+## 11. Reports
 
 ### TC-RPT-01: Category Pie Chart
 1. Add expenses across multiple categories
@@ -305,7 +339,7 @@
 
 ---
 
-## 11. Dark Mode
+## 12. Dark Mode
 
 ### TC-DRK-01: Toggle Theme
 1. Click theme toggle (sun/moon icon) in header
@@ -315,7 +349,7 @@
 
 ---
 
-## 12. Edge Cases
+## 13. Edge Cases
 
 ### TC-EDG-01: Empty State
 1. Create a new user, navigate to each page

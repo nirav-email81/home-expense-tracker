@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-A multi-user household expense tracking application with family sharing, INR currency, budget alerts, recurring expenses, planned expenses, and reporting.
+A multi-user household expense tracking application with family sharing, INR currency, budget alerts, recurring expenses, planned expenses, investments tracking, and reporting.
 
 ---
 
@@ -130,6 +130,20 @@ next.config.ts           # Server external packages config
 | active | INTEGER | Boolean flag |
 | created_at | TEXT | |
 
+**investments**
+| Column | Type | Notes |
+|--------|------|-------|
+| id | INTEGER PK | |
+| name | TEXT NOT NULL | |
+| type | TEXT CHECK | deposit/mutual_fund/gold/art/other |
+| amount | REAL NOT NULL | |
+| quantity | REAL | Nullable (units, grams) |
+| purchase_date | TEXT NOT NULL | |
+| notes | TEXT | Optional |
+| user_id | INTEGER FK | |
+| family_id | INTEGER FK | |
+| created_at | TEXT | |
+
 **planned_expenses**
 | Column | Type | Notes |
 |--------|------|-------|
@@ -202,6 +216,10 @@ next.config.ts           # Server external packages config
 | POST | /api/family | Create family |
 | PUT | /api/family | Rename family |
 | POST | /api/family/add-member | Owner adds member (name + email + password) |
+| GET | /api/investments | List investments (owner-only) |
+| POST | /api/investments | Add investment |
+| PUT | /api/investments/[id] | Update investment |
+| DELETE | /api/investments/[id] | Delete investment |
 | GET | /api/reports | Get report data (by category, monthly, etc.) |
 
 ### Query Parameters (Expenses GET)
@@ -255,11 +273,12 @@ if (user.familyId) {
 | /categories | Categories | Manage expense/income categories |
 | /recurring | Recurring | Recurring bills/subscriptions manager |
 | /planned-expenses | Planned | Major expected expenses (insurance, repairs) |
+| /investments | Investments | Track deposits, mutual funds, gold, art (owner-only) |
 | /reports | Reports | Charts (pie, bar), date range filter, CSV/PDF export |
 | /family | Family | Create family, add members, view members list |
 
 ### Navigation Sidebar
-- Dashboard, Expenses, Income, Budgets, Categories, Recurring, Planned, Reports, Family, Logout
+- Dashboard, Expenses, Income, Budgets, Categories, Recurring, Planned, Investments, Reports, Family, Logout
 
 ---
 
@@ -272,6 +291,7 @@ if (user.familyId) {
 5. **`Intl.NumberFormat("en-IN")` for INR**: Standard Indian numbering (1,23,456.78)
 6. **Family scope via shared `userIds` array**: All queries include all family members
 7. **Dynamic `orderBy` in API**: Sort parameter maps to a Drizzle column expression
+8. **Owner-only sections**: Investments tab restricted to family owner (or any user if no family)
 
 ---
 
