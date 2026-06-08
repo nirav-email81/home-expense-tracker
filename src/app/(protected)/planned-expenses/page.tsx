@@ -130,7 +130,7 @@ export default function PlannedExpensesPage() {
         </div>
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditing(null); }}>
           <DialogTrigger render={<Button><Plus className="h-4 w-4 mr-2" />Add Planned Expense</Button>} />
-          <DialogContent>
+          <DialogContent key={editing?.id ?? "new"}>
             <DialogHeader><DialogTitle>{editing ? "Edit" : "Add"} Planned Expense</DialogTitle></DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">

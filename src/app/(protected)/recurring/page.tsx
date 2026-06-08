@@ -114,7 +114,7 @@ export default function RecurringPage() {
         </div>
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditing(null); }}>
           <DialogTrigger render={<Button><Plus className="h-4 w-4 mr-2" />Add Recurring</Button>} />
-          <DialogContent>
+          <DialogContent key={editing?.id ?? "new"}>
             <DialogHeader><DialogTitle>{editing ? "Edit" : "Add"} Recurring Expense</DialogTitle></DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">

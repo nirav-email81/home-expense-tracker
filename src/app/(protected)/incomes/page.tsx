@@ -106,7 +106,7 @@ export default function IncomesPage() {
         </div>
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditing(null); }}>
           <DialogTrigger render={<Button><Plus className="h-4 w-4 mr-2" />Add Income</Button>} />
-          <DialogContent>
+          <DialogContent key={editing?.id ?? "new"}>
             <DialogHeader><DialogTitle>{editing ? "Edit Income" : "Add Income"}</DialogTitle></DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">

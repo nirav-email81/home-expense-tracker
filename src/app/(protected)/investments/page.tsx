@@ -165,7 +165,7 @@ export default function InvestmentsPage() {
         </div>
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditing(null); }}>
           <DialogTrigger render={<Button><Plus className="h-4 w-4 mr-2" />Add Investment</Button>} />
-          <DialogContent>
+          <DialogContent key={editing?.id ?? "new"}>
             <DialogHeader><DialogTitle>{editing ? "Edit" : "Add"} Investment</DialogTitle></DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
