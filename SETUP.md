@@ -244,7 +244,7 @@ HOME-EXPENSE-TRACKER/
 7. Use **Recurring** for regular expenses and **Planned** for major expected expenses
 8. Track **Investments** (deposits, mutual funds, gold, art)
 9. Explore **Reports** for charts and CSV/PDF export
-8. Optionally, create a **Family** to share with household members
+10. Optionally, create a **Family** to share with household members
 
 ---
 

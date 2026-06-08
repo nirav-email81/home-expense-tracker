@@ -1,0 +1,311 @@
+Build a multi-user household expense tracking application called "Home Expense Tracker" with the following specifications.
+
+## Tech Stack
+- Next.js 16 (App Router) with TypeScript
+- Base UI (the `@base-ui/react` package) for primitives, styled with Tailwind CSS v4
+- SQLite via `better-sqlite3` for database
+- Drizzle ORM for schema and queries
+- Custom JWT auth using `jose` (EncryptJWT) + `bcryptjs`
+- `@tanstack/react-query` for client-side data fetching
+- `date-fns` for date handling
+- `recharts` for charts
+- `sonner` for toast notifications
+- `next-themes` for dark mode
+- `jspdf` + `jspdf-autotable` for PDF export
+- `lucide-react` for icons
+- All monetary amounts in INR (Indian Rupees), formatted with `Intl.NumberFormat("en-IN")`
+
+## Project Structure
+```
+src/
+├── app/
+│   ├── api/            # REST API route handlers
+│   ├── (auth)/         # Login, Register pages
+│   ├── (protected)/    # Authenticated pages
+│   └── globals.css     # Tailwind v4 theme
+├── components/
+│   ├── shared/         # Sidebar, layout components
+│   ├── ui/             # Reusable UI primitives
+│   └── dashboard/      # Dashboard widgets
+├── db/
+│   ├── index.ts        # DB connection + init + seed
+│   └── schema.ts       # Drizzle table definitions
+├── lib/
+│   ├── dal.ts          # Data access layer
+│   ├── format.ts       # INR formatting utility
+│   ├── session.ts      # JWT encrypt/decrypt
+│   └── utils.ts        # cn() utility
+proxy.ts                 # Auth middleware (Next.js 16 convention)
+next.config.ts           # Server external packages config
+```
+
+## Setup Details
+- Use `npm create next-app` with TypeScript, ESLint, Tailwind CSS (v4 via `@tailwindcss/postcss`)
+- The `proxy.ts` file exports `onRequest` that reads `session` cookie, decrypts JWT, verifies DB session, and attaches `userId` header
+- Configure `next.config.ts` with `serverExternalPackages: ["better-sqlite3"]`
+- DB connection uses `Database` class with WAL mode enabled, auto-creates `data.db` file, seeds default categories
+- Session cookie: `httpOnly`, `secure` in production, `sameSite: "lax"`, path `/`
+
+## Database Schema (Drizzle ORM with SQLite)
+
+### users
+- id INTEGER PK autoincrement
+- name TEXT NOT NULL
+- email TEXT UNIQUE NOT NULL
+- password TEXT NOT NULL (bcrypt hashed)
+- familyId INTEGER FK -> families.id (nullable)
+- createdAt TEXT default current_timestamp
+
+### families
+- id INTEGER PK autoincrement
+- name TEXT NOT NULL
+- ownerId INTEGER FK -> users.id NOT NULL
+- createdAt TEXT default current_timestamp
+
+### categories
+- id INTEGER PK autoincrement
+- name TEXT NOT NULL (e.g. "Food & Dining")
+- type TEXT CHECK IN ("expense", "income")
+- icon TEXT (Lucide icon name, nullable)
+- color TEXT (hex color, nullable)
+- userId INTEGER FK -> users.id (nullable, for user-created)
+- familyId INTEGER FK -> families.id (nullable)
+- UNIQUE INDEX on (name, type, userId, familyId)
+
+Seed 15+ default expense categories (Food & Dining, Transportation, Utilities, Rent/Mortgage, Entertainment, Healthcare, Shopping, Education, Insurance, Subscriptions, Dining Out, Groceries, Personal Care, Home Maintenance, Miscellaneous) and 3 income categories (Salary, Freelance, Other Income).
+
+### expenses
+- id INTEGER PK autoincrement
+- amount REAL NOT NULL
+- description TEXT (nullable)
+- date TEXT NOT NULL (ISO date string)
+- categoryId INTEGER FK -> categories.id
+- userId INTEGER FK -> users.id
+- familyId INTEGER FK -> families.id (nullable)
+- receiptUrl TEXT (nullable, field exists but not used)
+- createdAt TEXT default current_timestamp
+
+### incomes (same structure as expenses)
+
+### budgets
+- id INTEGER PK autoincrement
+- categoryId INTEGER FK -> categories.id
+- amount REAL NOT NULL
+- month INTEGER (1-12)
+- year INTEGER
+- userId INTEGER FK -> users.id
+- familyId INTEGER FK -> families.id (nullable)
+- createdAt TEXT default current_timestamp
+
+### recurring_expenses
+- id INTEGER PK autoincrement
+- amount REAL
+- description TEXT
+- categoryId INTEGER FK -> categories.id
+- frequency TEXT CHECK IN ("daily", "weekly", "monthly", "yearly")
+- nextDate TEXT (ISO date)
+- userId INTEGER FK -> users.id
+- familyId INTEGER FK -> families.id (nullable)
+- active INTEGER (boolean, 0 or 1)
+- createdAt TEXT default current_timestamp
+
+### planned_expenses
+- id INTEGER PK autoincrement
+- name TEXT NOT NULL
+- amount REAL NOT NULL
+- dueDate TEXT NOT NULL (ISO date)
+- frequency TEXT CHECK IN ("one_time", "monthly", "quarterly", "yearly")
+- notes TEXT (nullable)
+- userId INTEGER FK -> users.id
+- familyId INTEGER FK -> families.id (nullable)
+- createdAt TEXT default current_timestamp
+
+### investments
+- id INTEGER PK autoincrement
+- name TEXT NOT NULL (e.g. "SBI FD", "HDFC Mutual Fund")
+- type TEXT CHECK IN ("deposit", "mutual_fund", "gold", "art", "other")
+- amount REAL NOT NULL
+- quantity REAL (nullable, for units/grams)
+- purchaseDate TEXT NOT NULL (ISO date)
+- notes TEXT (nullable)
+- userId INTEGER FK -> users.id
+- familyId INTEGER FK -> families.id (nullable)
+- createdAt TEXT default current_timestamp
+
+### sessions
+- id INTEGER PK autoincrement
+- userId INTEGER FK -> users.id
+- expiresAt TEXT
+- createdAt TEXT default current_timestamp
+
+## API Routes
+
+All API routes (except auth) verify auth via `getCurrentUser(request)` which reads the `userId` header set by proxy.ts and fetches the user + family data. Routes scope queries to the user's family (if in one, include ALL family members' data).
+
+### Auth
+- `POST /api/auth/register` — name, email, password. Hash password, create user, create JWT session cookie, return user
+- `POST /api/auth/login` — email, password. Verify bcrypt, create JWT session cookie, return user
+- `POST /api/auth/logout` — Delete session from DB, clear cookie
+
+### Expenses
+- `GET /api/expenses` — Paginated (page, limit), filterable (from, to, categoryId, minAmount, maxAmount, search), sortable (sortBy: date/amount/category/name, sortOrder: asc/desc). Join with users table to get userName. Return { data, total, totalPages }
+- `POST /api/expenses` — Create with amount, description, date, categoryId. Auto-set userId and familyId
+- `PUT /api/expenses/[id]` — Update, verify ownership
+- `DELETE /api/expenses/[id]` — Delete, verify ownership
+
+### Incomes
+- `GET /api/incomes` — Paginated, sortable. Same pattern as expenses
+- POST/PUT/DELETE — Same CRUD pattern
+
+### Categories
+- `GET /api/categories` — List all (global seed + user's own). Include userName for user-created
+- `POST /api/categories` — Create custom (name, type, color). userId set automatically
+- `PUT /api/categories/[id]` — Update name/color
+- `DELETE /api/categories/[id]` — Delete (only user-created, not seeded)
+
+### Budgets
+- `GET /api/budgets` — Query params: month, year. Join with categories to get categoryName, color. Also compute spentAmount for each budget (sum of expenses in same category+month+year)
+- `POST /api/budgets` — Set budget (categoryId, amount, month, year)
+- `DELETE /api/budgets/[id]` — Remove
+
+### Recurring Expenses
+- `GET /api/recurring` — List all
+- `POST /api/recurring` — Add (amount, description, categoryId, frequency, nextDate)
+- `PUT /api/recurring/[id]` — Update
+- `DELETE /api/recurring/[id]` — Delete
+
+### Planned Expenses
+- `GET /api/planned-expenses` — List all. Optional query: year (filters one_time by year)
+- `POST /api/planned-expenses` — Add (name, amount, dueDate, frequency, notes)
+- `PUT /api/planned-expenses/[id]` — Update
+- `DELETE /api/planned-expenses/[id]` — Delete
+
+### Investments (owner-only)
+- `GET /api/investments` — List investments. Only accessible by family owner (or any user if no family). Check: user must be family owner OR user has no family
+- `POST /api/investments` — Add (name, type, amount, quantity, purchaseDate, notes). Same owner check
+- `PUT /api/investments/[id]` — Update. Same owner check
+- `DELETE /api/investments/[id]` — Delete. Same owner check
+
+### Family
+- `GET /api/family` — Get family details + members list with roles
+- `POST /api/family` — Create family (name, auto-set ownerId to current user)
+- `PUT /api/family` — Rename family (owner only)
+- `POST /api/family/add-member` — Owner adds member. Creates a new user account with name, email, password and sets their familyId. Owner-only
+
+### Reports
+- `GET /api/reports` — Query params: from, to. Returns category breakdown (categoryName, total, color, percentage) and monthly comparison (month, income, expense). Date range defaults to current month if not provided
+
+### Dashboard
+- `GET /api/dashboard` — Returns current month totals (totalIncome, totalExpenses, balance), last 5 expenses with user names, and monthly comparison data
+
+## Pages / UI
+
+### Auth Pages (centered card layout)
+- `/login` — Email + password form, "Don't have an account? Register" link
+- `/register` — Name + email + password form, "Already have an account? Log in" link
+
+### Protected Layout
+- All pages wrapped in a layout with sidebar navigation and top header
+- Sidebar items: Dashboard, Expenses, Income, Budgets, Categories, Recurring, Planned, Investments, Reports, Family, Logout
+- Header shows page title, dark mode toggle (sun/moon icon), logout button
+- Active route highlighted in sidebar
+
+### Dashboard (`/dashboard`)
+- Top row: 3 summary cards (Total Income in green, Total Expenses in red, Balance)
+- Middle: Recent Expenses list (last 5, show by userName)
+- Bottom: Monthly comparison bar chart (Recharts BarChart, 2 months: current and last)
+
+### Expenses (`/expenses`)
+- "Add Expense" button opens dialog with form: Amount (₹), Description, Date (type="date"), Category (Select dropdown)
+- Filter bar with: search input, sort dropdown (Date/Amount/Category/By), sort direction toggle (↑/↓), Filters toggle button, Clear button
+- Filters panel (card): From date, To date, Category select, Min amount
+- Table: Date, Description, Category (with color dot), By (user name), Amount (right-aligned, red, INR format), Actions (pencil edit, trash delete)
+- Pagination: Previous/Next buttons with "Page X of Y" display, 15 items per page
+- Dialog for add/edit uses `key={editing?.id ?? "new"}` on DialogContent to force remount
+
+### Incomes (`/incomes`)
+- Similar to Expenses but without search/filter bar. Has sort controls and pagination
+- Amount displayed in green
+
+### Budgets (`/budgets`)
+- Month/Year selector at top
+- Grid of budget cards: category name, spent amount / budget amount, progress bar
+- Over-budget cards have red border + "Over budget by ₹X" message
+- "Set Budget" dialog: select category, enter amount
+- Delete button on each card
+
+### Categories (`/categories`)
+- Two sections: Expense Categories and Income Categories
+- Each category shown with color dot, name, type badge
+- Add/Edit/Delete for user-created categories (delete disabled for seeded ones)
+- Add dialog: name input, type select (expense/income), color picker
+
+### Recurring (`/recurring`)
+- Table: Amount, Description, Category, Frequency (badge), Next Date, Active (toggle switch), Actions
+- Dialog for add/edit: Amount, Description, Category, Frequency (select: Daily/Weekly/Monthly/Yearly), Next Date
+
+### Planned Expenses (`/planned-expenses`)
+- Top: 3 summary cards — One-Time total, Monthly total, Yearly total
+- Year filter dropdown
+- Table: Name, Amount, Due Date, Frequency, Notes, Status (Overdue/Upcoming badges), Actions
+- Dialog for add/edit: Name, Amount, Due Date, Frequency (select: One Time/Monthly/Quarterly/Yearly), Notes
+
+### Investments (`/investments`)
+- Restricted access: if user is in a family but not the owner, show "Access Restricted" message
+- Top: summary cards per type (Deposits, Mutual Funds, Gold, Art, Other) + Grand Total
+- Table: Name, Type (badge), Amount, Qty, Purchase Date, Notes, Actions
+- Dialog for add/edit: Name, Type (select: Bank Deposit/Mutual Fund/Gold/Art/Other), Amount, Quantity (optional, number), Purchase Date, Notes
+
+### Reports (`/reports`)
+- Date range filter (from/to + Apply button)
+- Category Breakdown pie chart (Recharts PieChart with legend, tooltip, colors from categories)
+- Income vs Expense bar chart (grouped by month within selected range, Recharts BarChart)
+- Export CSV button (downloads formatted CSV)
+- Export PDF button (downloads PDF using jsPDF with autoTable)
+
+### Family (`/family`)
+- If no family: "Create Family" button (no "Join Family" option)
+- If has family: show family name, member list with role badges (Owner 👑), "Rename Family" (owner only), "Add Member" form (owner only)
+- Add Member form: name + email + password (creates a new user account in the family)
+
+### Dark Mode
+- Toggle via sun/moon icon in header
+- Persisted in localStorage via next-themes ThemeProvider
+
+## UI Components (shadcn/ui style using Base UI)
+
+All UI primitives are thin wrappers around `@base-ui/react` components with Tailwind CSS v4 styling (using `cn()` utility for className merging). Key patterns:
+- Buttons use `render` prop for asChild behavior (e.g., DialogTrigger)
+- Dialogs use `open`/`onOpenChange` controlled state
+- Input, Select, etc. are wrappers around Base UI primitives
+- Labels use `<Label>` component
+- Toasts via `sonner` toast.success/error calls
+- All styling uses Tailwind v4 (classes in className strings, no inline styles except for dynamic colors)
+- Card components for layout sections
+- Table components for data display (consistent across all list pages)
+- Select components use SelectTrigger/SelectValue/SelectContent/SelectItem pattern
+
+## Family Sharing Logic
+- When user creates a family, they become the owner (ownerId in families table)
+- Owner can add members (creates new user accounts with familyId set)
+- When any member adds an expense/income, familyId is auto-set
+- GET queries scope to current user's family by collecting all userIds with the same familyId
+- Investments tab is owner-only: non-owner members see an "Access Restricted" message
+- Only owner can add members or rename family
+
+## Auth Middleware (proxy.ts)
+Next.js 16 uses `proxy.ts` instead of `middleware.ts`. Export `onRequest` function that:
+1. Reads the `session` cookie
+2. Decrypts JWT
+3. Verifies session exists in DB and not expired
+4. Attaches `userId` header to the request
+5. If invalid/missing, redirects to /login (for protected routes) or allows access (for auth routes)
+
+## Key Implementation Details
+- Use `FormData` in form submissions (not controlled inputs by default)
+- React Query for all data fetching with `queryKey` and `queryFn`
+- `formatINR()` utility using `Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" })`
+- All dialogs mount/unmount with open state
+- Use `key={editing?.id ?? "new"}` on DialogContent to force remount and avoid Base UI FieldControl defaultValue warnings
+- API error handling returns appropriate status codes and JSON error messages
+- Category colors stored as hex strings, displayed as inline style backgroundColor on color dots
